@@ -19,6 +19,9 @@ apply plugin: 'java'
 
 repositories {
     mavenCentral()
+    maven {
+        url "https://archiva.hops.works/repository/Hops"
+    }
 }
 
 dependencies {
@@ -72,6 +75,11 @@ dependencies {
     compile "org.mockito:mockito-all:1.8.5"
     compile "org.slf4j:slf4j-api:1.7.25"
     compile "org.slf4j:slf4j-log4j12:1.7.25"
+    // Add by jair start
+    compile "de.ruedigermoeller:fst:2.57"
+    compile group: 'org.apache.zookeeper', name: 'zookeeper', version: '3.7.0'
+    compile "com.logicalclocks:service-discovery-client:0.4-SNAPSHOT"
+    // Add by jair end
     testCompile "com.squareup.okhttp3:mockwebserver:3.7.0"
     testCompile "org.hamcrest:hamcrest-library:1.3"    
 }
