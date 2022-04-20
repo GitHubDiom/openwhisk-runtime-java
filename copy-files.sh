@@ -9,3 +9,5 @@ cp /home/vagrant/hops/hadoop-hdfs-project/hadoop-hdfs-client/target/hadoop-hdfs-
 cp /home/vagrant/hops/hadoop-common-project/hadoop-auth/target/hadoop-auth-3.2.0.3-SNAPSHOT.jar /home/vagrant/openwhisk-runtime-java/core/java8/libs/
 
 cp ~/.m2/repository/io/hops/hops-leader-election/3.2.0.3-SNAPSHOT/hops-leader-election-3.2.0.3-SNAPSHOT.jar /home/vagrant/openwhisk-runtime-java/core/java8/libs/
+
+cp /home/vagrant/clusterj/target/clusterj-modified-1.0.jar /home/vagrant/openwhisk-runtime-java/core/java8/libs/
