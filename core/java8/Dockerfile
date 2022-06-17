@@ -50,7 +50,8 @@ ENV LANG="en_US.UTF-8" \
    __OW_ALLOW_CONCURRENT="true" \
    LIBNDBPATH=/native/ \
    LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$LIBNDBPATH:/native/ \
-   HADOOP_CONF_DIR="/conf/"
+   HADOOP_CONF_DIR="/conf/" \
+   __ACTION_MEMORY=7500
 
 ADD proxy /javaAction
 
@@ -72,11 +73,9 @@ ADD libs /java_runtime_dependencies/
 ###############################
 
 # Install YourKit Java Profiler agents:
-RUN wget https://www.yourkit.com/download/docker/YourKit-JavaProfiler-2022.3-docker.zip -P /tmp/ && \
-  unzip /tmp/YourKit-JavaProfiler-2022.3-docker.zip -d /usr/local && \
-  rm /tmp/YourKit-JavaProfiler-2022.3-docker.zip
-
-EXPOSE 10001
+#RUN wget https://www.yourkit.com/download/docker/YourKit-JavaProfiler-2022.3-docker.zip -P /tmp/ && \
+#  unzip /tmp/YourKit-JavaProfiler-2022.3-docker.zip -d /usr/local && \
+#  rm /tmp/YourKit-JavaProfiler-2022.3-docker.zip
 
 # From default OpenWhisk image.
 RUN cd /javaAction \
@@ -85,7 +84,8 @@ RUN cd /javaAction \
 	&& rm -rf /javaAction/src \
 	&& ./compileClassCache.sh
 
-EXPOSE 9010
+# Profiler ports + MySQL.
+EXPOSE 1186 2202 3306 9010 10001
 
 # Used with OpenJ9 JDK. Does not support any sort of profiling.
 # CMD ["java", "-Dfile.encoding=UTF-8", "-Xshareclasses:cacheDir=/javaSharedCache,readonly", "-Xquickstart", "-Dcom.sun.management.jmxremote", "-Dcom.sun.management.jmxremote.port=9010", "-Dcom.sun.management.jmxremote.local.only=false", "-Dcom.sun.management.jmxremote.authenticate=false", "-Dcom.sun.management.jmxremote.ssl=false", "-Dcom.sun.management.jmxremote.rmi.port=9010", "-Djava.rmi.server.hostname=localhost", "-Djava.library.path=/native/", "-Dsun.io.serialization.extendedDebugInfo=true", "-Dlog4j.configuration=file:/conf/log4j.properties", "-cp", "/javaAction/build/libs/javaAction-all.jar", "org.apache.openwhisk.runtime.java.action.Proxy"]
@@ -96,17 +96,18 @@ CMD ["java", "-Dfile.encoding=UTF-8",                                       \
              "-Djava.library.path=/native/",                                \
              "-Dsun.io.serialization.extendedDebugInfo=true",               \
              "-Dlog4j.configuration=file:/conf/log4j.properties",           \
+	         "-XX:+UseConcMarkSweepGC",					                    \
              # Max heap size, set the same as min heap size.
              "-Xmx7000m",                                                   \
              # Min heap size, set the same as max heap size.
              "-Xms7000m",                                                   \
              # Throw error if we spend too much time GC-ing.
              # Useful to detect this type of issue.
-             "-XX:-UseGCOverheadLimit",                                     \
+             # "-XX:-UseGCOverheadLimit",                                     \
              # Prevent usage of GC heuristics so GC is more predictable.
-             "-XX:+UseCMSInitiatingOccupancyOnly",                          \
+             # "-XX:+UseCMSInitiatingOccupancyOnly",                          \
              # Informs JVM when CMS should be triggered. We cache a lot of objects, so I've set it a little higher.
-             "-XX:CMSInitiatingOccupancyFraction=75",                       \
+             # "-XX:CMSInitiatingOccupancyFraction=75",                       \
              # Instructs GC to collect young gen first before Full GC or CMS remark phase.
              # This improves performance due to no need to check ref between young gen and tenured.
              "-XX:+CMSScavengeBeforeRemark",                                \
@@ -114,17 +115,19 @@ CMD ["java", "-Dfile.encoding=UTF-8",                                       \
              "-verbose:gc",                                                 \
              "-XX:+PrintGCTimeStamps",                                      \
              "-XX:+PrintGCDetails",                                         \
-             "-XX:+UseAdaptiveSizePolicy",                                  \
-             "-XX:MaxGCPauseMillis=200",                                    \
-             "-XX:+PrintTenuringDistribution",			            \
-	     "-XX:+UseConcMarkSweepGC",					    \
-             #"-XX:NewSize=300m",					    \
-	     #"-XX:MaxNewSize=500m",					    \
-   	     "-XX:MaxTenuringThreshold=2",				    \
-	     "-XX:+CMSIncrementalMode",					    \
-	     "-XX:+UnlockDiagnosticVMOptions",                              \
-	     "-XX:ParGCCardsPerStrideChunk=32768",		 	    \
-	     "-agentpath:/usr/local/YourKit-JavaProfiler-2022.3/bin/linux-x86-64/libyjpagent.so=port=10001,listen=all", \
+             "-XX:MaxNewSize=5000m",                                        \
+             "-XX:+CMSClassUnloadingEnabled",                               \
+             "-XX:MaxGCPauseMillis=350",                                    \
+             #"-XX:+PrintTenuringDistribution",			                    \
+             #"-XX:+PrintGCApplicationStoppedTime",                          \
+             "-XX:MaxTenuringThreshold=2",				                    \
+             "-XX:+UnlockDiagnosticVMOptions",                              \
+             #"-XX:+PrintSafepointStatistics",                               \
+             #"-XX:PrintSafepointStatisticsCount=1",                         \
+             #"-XX:+SafepointTimeout",                                       \
+             #"-XX:SafepointTimeoutDelay=50",                                \
+             "-XX:ParGCCardsPerStrideChunk=2048",		 	                \
+             #"-agentpath:/usr/local/YourKit-JavaProfiler-2022.3/bin/linux-x86-64/libyjpagent.so=port=10001,listen=all", \
              "-cp", "/javaAction/build/libs/javaAction-all.jar", "org.apache.openwhisk.runtime.java.action.Proxy"]
 
 # Used with Non-OpenJ9 JDK.
